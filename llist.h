@@ -22,11 +22,6 @@ typedef struct packet_tracker_entry {
   int target;
 } packet_tracker_entry;
 
-typedef struct valid_routes_entry {
-  int dummy;
-  int connection;
-} valid_routes_entry;
-
 typedef struct neighbors_entry{
   int dummy;
   int neighbor_connection;
@@ -41,5 +36,4 @@ int llist_find_data(int index, void **datapp, llist_t *llistp);
 void * llist_get_data(int index, void **datapp, llist_t *llistp);
 int llist_change_data(int index, void *datap, llist_t *llistp);
 int llist_show_tracker(llist_t *llistp);
-int llist_show_valid_routes(llist_t *llistp);
 int llist_show_neighbors(llist_t *llistp);

@@ -159,24 +159,6 @@ int llist_show_tracker(llist_t *llistp)
   return 0;
 }
 
-int llist_show_valid_routes(llist_t *llistp)
-{
-  llist_node_t *cur;
-
-  valid_routes_entry  *connection_entry;
-  connection_entry = (valid_routes_entry *)malloc(sizeof(valid_routes_entry));
-
-  printf ("Valide Routen Linked list contains : \n");
-  for (cur=*llistp; cur != NULL; cur=cur->nextp) {
-
-	connection_entry =  cur->datap;
-    printf("Target(Index): %i (Ziel=1, Quelle=0) Connection: %i \n", cur->index, connection_entry->connection);
-
-  }
-
-  return 0;
-}
-
 int llist_show_neighbors(llist_t *llistp)
 {
   llist_node_t *cur;

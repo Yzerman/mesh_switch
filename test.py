@@ -20,7 +20,7 @@ BASE_PORT = 3333
 # must not have a trailing newline
 THE_MESSAGE = "detachement and love"
 
-be_verbose = False
+be_verbose = True
 
 class MeshNode(object):
    def __init__(self, port, is_sink=False, is_source=False):
@@ -175,6 +175,7 @@ if __name__ == '__main__':
   dbg(u"empfange und ueberpruefe Daten")
   exit_code = 127 # fail
   message = receive( nodes_sink )
+  dbg(message)
   if message == THE_MESSAGE:
     print "Test passed"
     exit_code = 0
