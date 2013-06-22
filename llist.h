@@ -10,6 +10,8 @@
  * 
  * Include file for linked list
  */
+#include "pthread.h";
+
 typedef struct llist_node {
   int index;
   void *datap;

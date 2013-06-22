@@ -15,7 +15,6 @@ C_SRCS += \
 ../conn_client.c \
 ../conn_io.c \
 ../conn_server.c \
-../getMesh_paket.c \
 ../llist.c 
 
 OBJS += \
@@ -23,7 +22,6 @@ OBJS += \
 ./conn_client.o \
 ./conn_io.o \
 ./conn_server.o \
-./getMesh_paket.o \
 ./llist.o 
 
 C_DEPS += \
@@ -31,7 +29,6 @@ C_DEPS += \
 ./conn_client.d \
 ./conn_io.d \
 ./conn_server.d \
-./getMesh_paket.d \
 ./llist.d 
 
 

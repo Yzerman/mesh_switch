@@ -21,13 +21,14 @@
 
 int llist_init (llist_t *llistp) 
 {
-  *llistp = NULL;
 
+	*llistp = NULL;
   return 0;
 }
 int llist_insert_data (int index, void *datap, llist_t *llistp) 
 {
   llist_node_t *cur, *prev, *new;
+
   int found = FALSE;
 
   for (cur=prev=*llistp; cur != NULL; prev=cur, cur=cur->nextp) {
@@ -51,7 +52,7 @@ int llist_insert_data (int index, void *datap, llist_t *llistp)
     else
       prev->nextp = new;
   }
-  return 0;
+   return 0;
 }
 int llist_remove_data(int index, void **datapp, llist_t *llistp) 
 {
@@ -92,7 +93,6 @@ int llist_find_data(int index, void **datapp, llist_t *llistp)
     	break;
 
     }
-
 
   }
   return 0;

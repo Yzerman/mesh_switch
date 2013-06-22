@@ -24,7 +24,7 @@ def connect_local_nodes(port1, port2):
     s.close()
 
 def send_data_packet(s, target, packet_nr):
-    packet = struct.pack('!HBc128s', packet_nr, target, 'C', " " * 128)
+    packet = struct.pack('!HBc128s', packet_nr, target, 'C', "Hello" * 128)
     s.sendall(packet)
     d = s.recv(132)
 
