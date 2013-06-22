@@ -99,13 +99,18 @@ void print_n_content(connection newcon){
 
 // Globale Variablen
 llist_t ll_neighbors;
+pthread_mutex_t *lock_ll_neighbors;
 llist_t ll_tracker;
+pthread_mutex_t *lock_ll_tracker;
 int neighbor_id;
+pthread_mutex_t *lock_neighbor_id;
 struct neighbors_entry *ptrneighbors_entry;
-struct neighbors_entry *ptrneighbors_entry1;
+pthread_mutex_t *lock_ptrneighbors_entry;
 struct packet_tracker_entry *pktentry;
+pthread_mutex_t *lock_pktentry;
 int valide_routen[2];
-pthread_mutex_t *lock;
+pthread_mutex_t *lock_valide_routen;
+
 
 /* Child thread implementation ----------------------------------------- */
 void *clean_packet_tracker(void * arg) {
@@ -115,7 +120,7 @@ void *clean_packet_tracker(void * arg) {
 	unsigned int paket_id = *(unsigned int *) arg;
 	struct packet_tracker_entry *pktentry10;
 	pktentry10 = (packet_tracker_entry*) malloc(sizeof(packet_tracker_entry));
-	pthread_mutex_lock(lock);
+	pthread_mutex_lock(lock_ll_tracker );
 	if ((packet_tracker_entry*) llist_get_data(paket_id, (void*) pktentry10,
 			&ll_tracker) == 0) {
 
@@ -126,7 +131,7 @@ void *clean_packet_tracker(void * arg) {
 
 	}
 
-	pthread_mutex_unlock(lock);
+	pthread_mutex_unlock(lock_ll_tracker );
 
 	free(pktentry10);
 	pthread_exit(NULL );
@@ -145,23 +150,22 @@ void *connection_handler(void * arg)
 	printf("Neuer Thread gestartet für Connection ID: %i\n ", connection_s);
 
 	// Neuer Nachbar Eintragen
-	pthread_mutex_lock(lock);
+	pthread_mutex_lock(lock_neighbor_id );
 	printf(
 			"Neuer Nachbar in Liste eingetragen: Nachbar-ID %i Nachbar-Connection: %i\n",
 			neighbor_id, connection_s);
-	pthread_mutex_unlock(lock);
-	struct neighbors_entry *ptrneighbors_entry3;
-	ptrneighbors_entry3 = (neighbors_entry*) malloc(sizeof(neighbors_entry));
-
 	int this_neighbor_id = neighbor_id;
-	ptrneighbors_entry3->neighbor_connection = connection_s;
-	pthread_mutex_lock(lock);
-	llist_insert_data(this_neighbor_id, ptrneighbors_entry3, &ll_neighbors);
-	llist_show_neighbors(&ll_neighbors);
-
 	//Nachbar ID für nächsten Knoten erhöhen.
 	neighbor_id++;
-	pthread_mutex_unlock(lock);
+	pthread_mutex_unlock(lock_neighbor_id);
+	struct neighbors_entry *ptrneighbors_entry3;
+	ptrneighbors_entry3 = (neighbors_entry*) malloc(sizeof(neighbors_entry));
+	ptrneighbors_entry3->neighbor_connection = connection_s;
+	pthread_mutex_lock(lock_ll_neighbors );
+	llist_insert_data(this_neighbor_id, ptrneighbors_entry3, &ll_neighbors);
+	llist_show_neighbors(&ll_neighbors);
+	pthread_mutex_unlock(lock_ll_neighbors);
+
 	int counter;
 	//1 Sekunde warten bis Socket bereit ist. Stürzt sonst teilweise ab
 
@@ -258,24 +262,27 @@ void *connection_handler(void * arg)
 					int paket_id = (int) paket.paket_id;
 
 					//Paket mit der Paket_ID auslesen
-					pthread_mutex_lock(lock);
+					pthread_mutex_lock(lock_ll_tracker );
+					//pthread_mutex_lock(lock_pktentry  );
 					if (!(packet_tracker_entry*) llist_get_data(paket_id,
 							(void*) pktentry, &ll_tracker) == 0) {
 
 						pktentry = (packet_tracker_entry*) llist_get_data(
 								paket_id, (void*) pktentry, &ll_tracker);
-						pthread_mutex_unlock(lock);
-
 						printf(
 								"Eintrag im Tracker gefunden, Paket verwerfnen: Paket_ID: %i Nachbar ID: %i Target: %i \n",
 								ntohs(paket_id), pktentry->neighbor_id,
 								pktentry->target);
 
+						//pthread_mutex_unlock(lock_pktentry  );
+						pthread_mutex_unlock(lock_ll_tracker );
+
+
 					} else {
-						pthread_mutex_unlock(lock);
+						pthread_mutex_unlock(lock_ll_tracker );
 						//llist_show_tracker(&ll_tracker);
 						printf("Eintrag im Tracker nicht gefunden \n");
-						pthread_mutex_lock(lock);
+						pthread_mutex_lock(lock_valide_routen);
 						printf("Valide Routen %i %i \n", paket.target,
 								valide_routen[paket.target]);
 
@@ -287,7 +294,7 @@ void *connection_handler(void * arg)
 							ptrneighbors_entry4 = llist_get_data(
 									valide_routen[paket.target],
 									(void*) ptrneighbors_entry4, &ll_neighbors);
-							pthread_mutex_unlock(lock);
+							pthread_mutex_unlock(lock_valide_routen);
 							int connection_fd1 =
 									ptrneighbors_entry4->neighbor_connection;
 							//free(ptrneighbors_entry4);
@@ -302,13 +309,15 @@ void *connection_handler(void * arg)
 						}
 
 						else {
-							pthread_mutex_unlock(lock);
+							pthread_mutex_unlock(lock_valide_routen);
 							// Route existiert nicht. Sende an alle Nachbarn
 							printf(
 									"Es existiert keine Route zu %i (Ziel=1, QUelle=0)\n",
 									paket.target);
-							pthread_mutex_lock(lock);
+							pthread_mutex_lock(lock_ll_neighbors );
 							llist_show_neighbors(&ll_neighbors);
+							pthread_mutex_lock(lock_neighbor_id );
+							pthread_mutex_lock(lock_ptrneighbors_entry  );
 							if (neighbor_id == 0) {
 								printf("Keine Nachbarn vorhanden \n");
 							}
@@ -320,14 +329,12 @@ void *connection_handler(void * arg)
 										&ll_neighbors) == 0) {
 									printf("Kein Eintrag mit Nachbar ID: %i \n",
 											i);
-									pthread_mutex_unlock(lock);
 
 								} else {
 									ptrneighbors_entry =
 											(neighbors_entry*) llist_get_data(i,
 													(void *) ptrneighbors_entry,
 													&ll_neighbors);
-									pthread_mutex_unlock(lock);
 
 									if (ptrneighbors_entry->neighbor_connection
 											== connection_s) {
@@ -347,20 +354,26 @@ void *connection_handler(void * arg)
 												paket.paket_type,
 												ntohs(paket.paket_id), i,
 												ptrneighbors_entry->neighbor_connection);
-
+										//pthread_mutex_lock(lock_pktentry  );
 										pktentry->neighbor_id = i;
+										//pthread_mutex_unlock(lock_pktentry  );
 
 									}
 
 								}
 							}
+							pthread_mutex_unlock(lock_ptrneighbors_entry  );
+							pthread_mutex_unlock(lock_neighbor_id );
+							pthread_mutex_unlock(lock_ll_neighbors );
 						}
+						//pthread_mutex_lock(lock_pktentry  );
 						pktentry->target = paket.target;
 						pktentry->neighbor_id = this_neighbor_id;
-						pthread_mutex_lock(lock);
+						pthread_mutex_lock(lock_ll_tracker );
 						llist_insert_data(paket_id, pktentry, &ll_tracker);
+						//pthread_mutex_unlock(lock_pktentry  );
 						llist_show_tracker(&ll_tracker);
-						pthread_mutex_unlock(lock);
+						pthread_mutex_unlock(lock_ll_tracker );
 
 					}
 
@@ -382,58 +395,61 @@ void *connection_handler(void * arg)
 			}
 
 			if (paket.paket_type == 'O') {
+				pthread_mutex_lock(lock_ll_tracker );
+				pthread_mutex_lock(lock_pktentry  );
+				pthread_mutex_lock(ptrneighbors_entry);
+				pthread_mutex_lock(lock_valide_routen);
+				pthread_mutex_lock(lock_ll_neighbors);
 
 				int paket_id = (int) paket.paket_id;
 				print_paket(paket);
 				printf("Bestätigung für Paket %i erhalten \n", ntohs(paket_id));
 
 				//Ist das Paket im Tracker vorhanden?
-				pthread_mutex_lock(lock);
-				llist_show_tracker(&ll_tracker);
+						llist_show_tracker(&ll_tracker);
 				if ((packet_tracker_entry*) llist_get_data(paket_id,
 						(void*) pktentry, &ll_tracker) == 0) {
 
 					printf(
 							"Passendes Paket zur Bestätigung im Tracker nicht gefunden \n");
-					pthread_mutex_unlock(lock);
 
 				} else {
+
 					pktentry = (packet_tracker_entry*) llist_get_data(paket_id,
 							(void*) pktentry, &ll_tracker);
 
-					pthread_mutex_unlock(lock);
 					//Dieses paket wurde in der Liste gefunden
-
 					printf("Eintrag im Tracker gefunden: Paket_ID: %i Nachbar ID: %i Target: %i \n",
 							ntohs(paket_id), pktentry->neighbor_id,
 							pktentry->target);
+
 					llist_show_neighbors(&ll_neighbors);
 					int source_id = pktentry->neighbor_id;
-					pthread_mutex_lock(lock);
 					valide_routen[paket.target] = this_neighbor_id;
 					printf("Valide ROuten Target: %i über Nachbar: %i \n",
 							paket.target, valide_routen[paket.target]);
-					pthread_mutex_unlock(lock);
-
-					pthread_mutex_lock(lock);
 					ptrneighbors_entry = (neighbors_entry*) llist_get_data(
 							source_id, (void *) ptrneighbors_entry,
 							&ll_neighbors);
-					pthread_mutex_unlock(lock);
-					printf("Bestätigung weiterleiten an: Nachbar ID %i Nachbar Connection %i \n", source_id, ptrneighbors_entry->neighbor_connection);
 
+					printf("Bestätigung weiterleiten an: Nachbar ID %i Nachbar Connection %i \n", source_id, ptrneighbors_entry->neighbor_connection);
 					send_all(ptrneighbors_entry->neighbor_connection, &paket,
 							sizeof(paket));
-					pthread_mutex_lock(lock);
 
 					llist_remove_data(paket_id, (void*) pktentry, &ll_tracker);
-
 					llist_show_tracker(&ll_tracker);
-					pthread_mutex_unlock(lock);
+
 
 				}
 
+				pthread_mutex_unlock(lock_ll_tracker );
+				pthread_mutex_unlock(lock_pktentry  );
+				pthread_mutex_unlock(ptrneighbors_entry);
+				pthread_mutex_unlock(lock_valide_routen);
+				pthread_mutex_unlock(lock_ll_neighbors);
+
 			}
+
 
 		}
 
@@ -443,11 +459,11 @@ void *connection_handler(void * arg)
 	printf("Verbindung getrennt von Connection %i Nachbar ID: %i \n"
 			"Nachbarliste wird bereinigt \n", connection_s, this_neighbor_id);
 	ptrneighbors_entry3->neighbor_connection = connection_s;
-	pthread_mutex_lock(lock);
+	pthread_mutex_lock(lock_ll_neighbors);
 	llist_remove_data(this_neighbor_id, (void*) ptrneighbors_entry3,
 			&ll_neighbors);
 	llist_show_neighbors(&ll_neighbors);
-	pthread_mutex_unlock(lock);
+	pthread_mutex_unlock(lock_ll_neighbors);
 	free(ptrneighbors_entry3);
 	pthread_exit(NULL );
 
@@ -457,8 +473,14 @@ int main(int argc, char *argv[])
 {
   int sock_fd, connection_fd, status =0;
 
-  lock = (pthread_mutex_t *)malloc( sizeof( pthread_mutex_t ) );
-  pthread_mutex_init( lock, NULL);
+  lock_ll_neighbors = (pthread_mutex_t *)malloc( sizeof( pthread_mutex_t ) );   pthread_mutex_init( lock_ll_neighbors, NULL);
+  lock_ll_tracker = (pthread_mutex_t *)malloc( sizeof( pthread_mutex_t ) );   pthread_mutex_init( lock_ll_tracker, NULL);
+  lock_ptrneighbors_entry = (pthread_mutex_t *)malloc( sizeof( pthread_mutex_t ) );   pthread_mutex_init( lock_ptrneighbors_entry, NULL);
+  lock_pktentry = (pthread_mutex_t *)malloc( sizeof( pthread_mutex_t ) );   pthread_mutex_init( lock_pktentry, NULL);
+  lock_valide_routen = (pthread_mutex_t *)malloc( sizeof( pthread_mutex_t ) );   pthread_mutex_init( lock_valide_routen, NULL);
+  lock_neighbor_id = (pthread_mutex_t *)malloc( sizeof( pthread_mutex_t ) );   pthread_mutex_init( lock_neighbor_id, NULL);
+
+
   neighbor_id = 0;
   unsigned int thread_args;
   pthread_t threads;
@@ -515,9 +537,10 @@ int main(int argc, char *argv[])
      }
     pthread_join( threads , NULL);
     disconnect_client(sock_fd);
-    //free(ptrneighbors_entry);
-   // free(pktentry);
-    free(lock);
+    free(ptrneighbors_entry);
+    free(pktentry);
+    free(lock_ll_neighbors );free(lock_ptrneighbors_entry );
+    free(lock_pktentry );free(lock_valide_routen);free(lock_neighbor_id);
 
     return TRUE;
 
